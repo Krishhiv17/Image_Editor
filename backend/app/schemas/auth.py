@@ -32,6 +32,19 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def model_validate(cls, obj):
+        """Custom validation to convert UUID to string."""
+        if hasattr(obj, 'id'):
+            obj_dict = {
+                'id': str(obj.id),
+                'email': obj.email,
+                'oauth_provider': obj.oauth_provider,
+                'created_at': obj.created_at
+            }
+            return cls(**obj_dict)
+        return super().model_validate(obj)
 
 
 class TokenResponse(BaseModel):

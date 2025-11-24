@@ -3,6 +3,7 @@ Main FastAPI application entry point.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.routers import auth
 
@@ -11,6 +12,13 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     debug=settings.debug
+)
+
+# Add Session Middleware (required for OAuth)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.jwt_secret_key,  # Use same secret as JWT
+    max_age=3600,  # 1 hour session
 )
 
 # Configure CORS
@@ -54,13 +62,15 @@ async def health_check():
 
 
 # Include routers
+from app.routers import photos, edits
+from app.routes import albums
+
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(photos.router, prefix="/api/photos", tags=["photos"])
+app.include_router(edits.router, prefix="/api/edits", tags=["edits"])
+app.include_router(albums.router)  # Albums router has its own prefix
 
 # Additional routers will be added as we build them
-# app.include_router(uploads.router, prefix="/api/uploads", tags=["uploads"])
-# app.include_router(albums.router, prefix="/api/albums", tags=["albums"])
-# app.include_router(photos.router, prefix="/api/photos", tags=["photos"])
-# app.include_router(edits.router, prefix="/api/edits", tags=["edits"])
 # app.include_router(search.router, prefix="/api/search", tags=["search"])
 # app.include_router(shares.router, prefix="/api/shares", tags=["shares"])
 

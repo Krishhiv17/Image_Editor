@@ -52,14 +52,29 @@ class Photo(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    album_id = Column(UUID(as_uuid=True), ForeignKey("albums.id", ondelete="CASCADE"), nullable=False, index=True)
-    blob_key = Column(Text, nullable=False)  # Path in Azure Blob
-    mime = Column(Text, nullable=False)
+    album_id = Column(UUID(as_uuid=True), ForeignKey("albums.id", ondelete="CASCADE"), nullable=True, index=True)  # Made nullable
+    
+    # File information
+    filename = Column(Text, nullable=False)  # Original filename
+    blob_name = Column(Text, nullable=False)  # Path in Azure Blob (unique identifier)
+    blob_url = Column(Text, nullable=False)  # Full URL to blob
+    thumbnail_url = Column(Text, nullable=True)  # URL to thumbnail (optional)
+    file_size = Column(Integer, nullable=False)  # Size in bytes
+    content_type = Column(Text, nullable=False)  # MIME type
+    
+    # Image metadata
     width = Column(Integer)
     height = Column(Integer)
-    exif_json = Column(JSONB, nullable=True)  # Camera metadata
+    exif_data = Column(JSONB, nullable=True)  # Camera metadata (renamed from exif_json)
     taken_at = Column(TIMESTAMP(timezone=True), nullable=True)  # Extracted from EXIF
+    
+    # Legacy columns (kept for compatibility, can be removed later)
+    blob_key = Column(Text, nullable=True)  # Old path column
+    mime = Column(Text, nullable=True)  # Old MIME column
+    
+    # Timestamps
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
     owner = relationship("User", back_populates="photos")

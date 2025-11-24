@@ -1,7 +1,7 @@
 """
 Authentication router for user registration, login, and OAuth.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
@@ -180,7 +180,7 @@ async def get_current_user_info(
 
 
 @router.get("/oauth/google/login")
-async def google_login():
+async def google_login(request: Request):
     """
     Initiate Google OAuth login flow.
     
@@ -188,30 +188,30 @@ async def google_login():
         Redirect to Google OAuth consent screen
     """
     redirect_uri = settings.google_redirect_uri
-    return await oauth.google.authorize_redirect(redirect_uri)
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
 @router.get("/oauth/google/callback")
 async def google_callback(
-    code: str,
+    request: Request,
     db: Session = Depends(get_db)
-) -> TokenResponse:
+):
     """
     Handle Google OAuth callback.
     
     Args:
-        code: Authorization code from Google
+        request: FastAPI request object
         db: Database session
         
     Returns:
-        Access and refresh tokens with user info
+        Redirect to frontend dashboard with tokens
         
     Raises:
         HTTPException: If OAuth flow fails
     """
     try:
         # Exchange code for token
-        token = await oauth.google.authorize_access_token()
+        token = await oauth.google.authorize_access_token(request)
         
         # Get user info from Google
         user_info = token.get('userinfo')
@@ -241,17 +241,18 @@ async def google_callback(
         # Generate tokens
         tokens = AuthService.create_user_tokens(user)
         
-        return TokenResponse(
-            access_token=tokens["access_token"],
-            refresh_token=tokens["refresh_token"],
-            user=UserResponse.model_validate(user)
-        )
+        # Redirect to frontend with tokens in URL
+        from starlette.responses import RedirectResponse
+        frontend_url = "http://localhost:3000/dashboard"
+        redirect_url = f"{frontend_url}?access_token={tokens['access_token']}&refresh_token={tokens['refresh_token']}"
+        
+        return RedirectResponse(url=redirect_url)
         
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OAuth authentication failed: {str(e)}"
-        )
+        # Redirect to frontend login page with error
+        from starlette.responses import RedirectResponse
+        error_url = f"http://localhost:3000/login?error=oauth_failed&message={str(e)}"
+        return RedirectResponse(url=error_url)
 
 
 @router.post("/logout")
