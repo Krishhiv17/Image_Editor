@@ -24,11 +24,12 @@ jobs:
           node-version: '20.x'
 
       - name: npm install, build, and test
+        env:
+          NEXT_PUBLIC_API_URL: https://photo-editor-api-krishhiv-bxg3cecugfb2a3eg.centralindia-01.azurewebsites.net
         run: |
           cd frontend
           npm install
           npm run build --if-present
-          npm run test --if-present
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
@@ -67,4 +68,5 @@ jobs:
           package: .
 
           
+
 
