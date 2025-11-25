@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading, logout, isAuthenticated } = useAuth()
@@ -174,5 +174,20 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
