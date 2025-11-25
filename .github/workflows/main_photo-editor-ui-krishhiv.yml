@@ -28,16 +28,18 @@ jobs:
           NEXT_PUBLIC_API_URL: https://photo-editor-api-krishhiv-bxg3cecugfb2a3eg.centralindia-01.azurewebsites.net
         run: |
           cd frontend
-          npm install
-          npm run build --if-present
-
+          npm ci
+          npm run build
+      
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: node-app
           path: |
-            frontend/
-            !frontend/node_modules/
+            frontend/.next/standalone/
+            frontend/.next/static/
+            frontend/public/
+            frontend/package.json
 
   deploy:
     runs-on: ubuntu-latest
@@ -68,5 +70,6 @@ jobs:
           package: .
 
           
+
 
 
