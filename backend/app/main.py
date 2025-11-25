@@ -47,13 +47,7 @@ async def add_security_headers(request, call_next):
 
 @app.get("/")
 async def root():
-    """Health check endpoint."""
-    return {
-        "app": settings.app_name,
-        "version": settings.app_version,
-        "status": "healthy"
-    }
-
+    return {"message": "Photo Editor API is running", "version": "1.0.0"}
 
 @app.get("/health")
 async def health_check():
@@ -63,12 +57,15 @@ async def health_check():
 
 # Include routers
 from app.routers import photos, edits
-from app.routes import albums
+from app.routes import albums, tags, search, shares
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(photos.router, prefix="/api/photos", tags=["photos"])
 app.include_router(edits.router, prefix="/api/edits", tags=["edits"])
 app.include_router(albums.router)  # Albums router has its own prefix
+app.include_router(tags.router)  # Tags router has its own prefix
+app.include_router(search.router)  # Search router has its own prefix
+app.include_router(shares.router)  # Shares router has its own prefix
 
 # Additional routers will be added as we build them
 # app.include_router(search.router, prefix="/api/search", tags=["search"])

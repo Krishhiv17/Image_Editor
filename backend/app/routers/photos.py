@@ -3,6 +3,7 @@ Photo upload and management router.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User, Photo
@@ -152,14 +153,14 @@ async def complete_upload(
         )
 
 
-@router.get("", response_model=PhotoListResponse)
+@router.get("")
 async def list_photos(
     album_id: Optional[UUID] = None,
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
-) -> PhotoListResponse:
+):
     """
     List user's photos.
     
@@ -185,27 +186,48 @@ async def list_photos(
     # Get paginated results
     photos = query.order_by(Photo.created_at.desc()).offset(offset).limit(limit).all()
     
-    # Process photos with SAS tokens
+    # Process photos with SAS tokens and tags
     photo_responses = []
     for p in photos:
-        response = PhotoResponse.model_validate(p)
+        # Get tags for this photo
+        tags_query = text("""
+            SELECT t.id, t.name
+            FROM tags t
+            INNER JOIN photo_tags pt ON t.id = pt.tag_id
+            WHERE pt.photo_id = :photo_id
+            ORDER BY t.name ASC
+        """)
+        tags_result = db.execute(tags_query, {"photo_id": str(p.id)})
+        tags = tags_result.fetchall()
         
         # Generate SAS token if blob_name exists
+        blob_url = p.blob_url
         if p.blob_name:
             sas_token = blob_service.generate_read_sas_token(
                 settings.blob_container_originals,
                 p.blob_name
             )
-            response.blob_url = f"{response.blob_url}{sas_token}"
-            
-        photo_responses.append(response)
+            blob_url = f"{blob_url}{sas_token}"
+        
+        # Build photo dict with tags and all required fields
+        photo_dict = {
+            "id": str(p.id),
+            "filename": p.filename,
+            "blob_url": blob_url,
+            "blob_name": p.blob_name,
+            "thumbnail_url": p.thumbnail_url,
+            "owner_id": str(p.owner_id),
+            "file_size": p.file_size or 0,
+            "content_type": p.content_type or "image/jpeg",
+            "created_at": p.created_at,
+            "updated_at": p.updated_at,
+            "width": p.width,
+            "height": p.height,
+            "tags": [{"id": str(tag.id), "name": tag.name} for tag in tags]
+        }
+        photo_responses.append(photo_dict)
     
-    return PhotoListResponse(
-        photos=photo_responses,
-        total=total,
-        limit=limit,
-        offset=offset
-    )
+    return {"photos": photo_responses, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/{photo_id}", response_model=PhotoResponse)

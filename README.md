@@ -1,180 +1,215 @@
-# Photo Editor Application
+# Photo Editor - Production Deployment
 
-A cloud-based photo editing application with advanced features built with Next.js and FastAPI.
+## 🚀 Quick Deploy to Azure
 
-## Features
+### Prerequisites
+```bash
+# Install Azure CLI
+brew install azure-cli  # macOS
+# or visit https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 
-- 📸 **Photo Upload & Management**: Upload multiple photos with drag-and-drop, organize in albums
-- ✏️ **Advanced Editing**: Crop, rotate, resize, adjust brightness/contrast/saturation, apply filters
-- 📜 **Version History**: Track all edits, revert to previous versions
-- 🔍 **Search & Organization**: Search by tags, EXIF metadata, date ranges
-- 🔗 **Sharing**: Generate share links with view/edit permissions and expiry
-- 🔐 **Google OAuth**: Secure authentication with Google
-- ☁️ **Cloud Storage**: Integrated with Azure Blob Storage and PostgreSQL
-- ♿ **Accessible**: WCAG AA compliant with keyboard navigation and screen reader support
+# Install Docker
+# https://docs.docker.com/get-docker/
+```
 
-## Project Structure
+### Deploy in 5 Steps
+
+#### 1. Login to Azure
+```bash
+az login
+```
+
+#### 2. Set Your Variables
+```bash
+export RESOURCE_GROUP="photo-editor-rg"
+export LOCATION="eastus"
+export BACKEND_APP="photo-editor-backend-$(whoami)"
+export FRONTEND_APP="photo-editor-frontend-$(whoami)"
+export DOCKER_USERNAME="your-dockerhub-username"
+```
+
+#### 3. Build & Push Docker Images
+```bash
+# Backend
+cd backend
+docker build -t $DOCKER_USERNAME/photo-editor-backend:latest .
+docker push $DOCKER_USERNAME/photo-editor-backend:latest
+
+# Frontend
+cd ../frontend
+docker build -t $DOCKER_USERNAME/photo-editor-frontend:latest .
+docker push $DOCKER_USERNAME/photo-editor-frontend:latest
+```
+
+#### 4. Create Azure Resources
+```bash
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create App Service Plan
+az appservice plan create \
+  --name photo-editor-plan \
+  --resource-group $RESOURCE_GROUP \
+  --is-linux \
+  --sku B1
+
+# Deploy Backend
+az webapp create \
+  --resource-group $RESOURCE_GROUP \
+  --plan photo-editor-plan \
+  --name $BACKEND_APP \
+  --deployment-container-image-name $DOCKER_USERNAME/photo-editor-backend:latest
+
+# Deploy Frontend
+az webapp create \
+  --resource-group $RESOURCE_GROUP \
+  --plan photo-editor-plan \
+  --name $FRONTEND_APP \
+  --deployment-container-image-name $DOCKER_USERNAME/photo-editor-frontend:latest
+```
+
+#### 5. Configure Environment Variables
+```bash
+# Backend
+az webapp config appsettings set \
+  --resource-group $RESOURCE_GROUP \
+  --name $BACKEND_APP \
+  --settings \
+    DATABASE_URL="<your-azure-postgres-url>" \
+    JWT_SECRET_KEY="<generate-random-key>" \
+    JWT_REFRESH_SECRET_KEY="<generate-random-key>" \
+    GOOGLE_CLIENT_ID="<your-google-client-id>" \
+    GOOGLE_CLIENT_SECRET="<your-google-secret>" \
+    AZURE_STORAGE_ACCOUNT_NAME="photoeditstorage" \
+    AZURE_STORAGE_ACCOUNT_KEY="<your-storage-key>" \
+    AZURE_STORAGE_CONNECTION_STRING="<your-connection-string>" \
+    CORS_ORIGINS="https://$FRONTEND_APP.azurewebsites.net" \
+    FRONTEND_URL="https://$FRONTEND_APP.azurewebsites.net"
+
+# Frontend
+az webapp config appsettings set \
+  --resource-group $RESOURCE_GROUP \
+  --name $FRONTEND_APP \
+  --settings NEXT_PUBLIC_API_URL="https://$BACKEND_APP.azurewebsites.net"
+```
+
+### Access Your App
+
+```bash
+echo "Frontend: https://$FRONTEND_APP.azurewebsites.net"
+echo "Backend API: https://$BACKEND_APP.azurewebsites.net/docs"
+```
+
+---
+
+## 🧪 Test Locally with Docker
+
+```bash
+# Create .env file with your credentials
+cp backend/.env.example backend/.env
+# Edit backend/.env with your values
+
+# Start all services
+docker-compose up --build
+
+# Access:
+# Frontend: http://localhost:3000
+# Backend: http://localhost:8000/docs
+```
+
+---
+
+## 📚 Full Documentation
+
+See [AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md) for:
+- Detailed deployment steps
+- Environment variable configuration
+- OAuth setup
+- Database migrations
+- Troubleshooting guide
+- Cost estimates
+- CI/CD setup
+
+---
+
+## 🔧 Project Structure
 
 ```
 Image_Editor/
-├── backend/           # FastAPI backend
+├── backend/              # FastAPI backend
 │   ├── app/
-│   │   ├── models/    # SQLAlchemy models
-│   │   ├── routers/   # API routes
-│   │   ├── services/  # Business logic
-│   │   ├── schemas/   # Pydantic schemas
-│   │   └── utils/     # Utilities
-│   ├── migrations/    # Alembic migrations
-│   └── tests/         # PyTest tests
-├── frontend/          # Next.js frontend
-│   ├── app/           # Next.js 14 app router
-│   ├── components/    # React components
-│   ├── lib/           # Utilities and API client
-│   ├── hooks/         # Custom React hooks
-│   └── types/         # TypeScript types
-└── docs/              # Documentation
+│   ├── migrations/       # Database migrations
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/             # Next.js frontend
+│   ├── app/
+│   ├── components/
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml    # Local development
+└── AZURE_DEPLOYMENT.md   # Deployment guide
 ```
 
-## Prerequisites
+---
 
-- Python 3.11+
-- Node.js 18+
-- Azure Student Account
-- Google Cloud Console account (for OAuth)
+## ✨ Features
 
-## Setup
+- 📸 Photo upload and management
+- 🎨 Advanced image editing (filters, crop, rotate, etc.)
+- 📁 Album organization
+- 🏷️ Photo tagging
+- 🔍 Search and filtering
+- 🔗 Secure sharing (photos & albums)
+- 🔐 Google OAuth authentication
+- ☁️ Azure Blob Storage integration
 
-### 1. Azure Resources
+---
 
-Follow the detailed [Azure Setup Guide](./AZURE_SETUP.md) to:
-- Create Azure PostgreSQL database
-- Create Azure Blob Storage account
-- Configure Google OAuth
-- (Optional) Create Azure VM for deployment
+## 💰 Azure Cost Estimate
 
-### 2. Backend Setup
+**Monthly costs:**
+- Backend App Service (B1): ~$13
+- Frontend App Service (B1): ~$13
+- PostgreSQL (Basic): ~$30
+- Blob Storage: ~$0.02/GB
 
-```bash
-cd backend
+**Total: ~$56+/month**
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+*Use F1 (Free tier) for testing*
 
-# Install dependencies
-pip install -r requirements.txt
+---
 
-# Copy environment variables
-cp .env.example .env
-# Edit .env with your Azure credentials
+## 🛠️ Tech Stack
 
-# Run database migrations
-alembic upgrade head
+**Backend:**
+- Python 3.11
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- Azure Blob Storage
 
-# Start development server
-python app/main.py
-```
+**Frontend:**
+- Next.js 16
+- React
+- TypeScript
+- Tailwind CSS
 
-Backend will run on http://localhost:8000
+**Infrastructure:**
+- Docker
+- Azure App Services
+- Azure PostgreSQL
+- Azure Blob Storage
 
-### 3. Frontend Setup
+---
 
-```bash
-cd frontend
+## 📝 License
 
-# Install dependencies
-npm install
+MIT License - feel free to use for your projects!
 
-# Copy environment variables
-cp .env.example .env.local
-# Edit .env.local with your configuration
+---
 
-# Start development server
-npm run dev
-```
+## 🤝 Support
 
-Frontend will run on http://localhost:3000
+For issues or questions, check the deployment guide or create an issue.
 
-## Environment Variables
-
-### Backend (.env)
-- `DATABASE_URL`: Azure PostgreSQL connection string
-- `JWT_SECRET_KEY`: Secret key for JWT tokens
-- `GOOGLE_CLIENT_ID`: Google OAuth client ID
-- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret
-- `AZURE_STORAGE_ACCOUNT_NAME`: Azure storage account name
-- `AZURE_STORAGE_ACCOUNT_KEY`: Azure storage account key
-
-### Frontend (.env.local)
-- `NEXT_PUBLIC_API_URL`: Backend API URL
-- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuth client ID
-
-## Development
-
-### Running Tests
-
-```bash
-# Backend tests
-cd backend
-pytest
-
-# Frontend tests (when implemented)
-cd frontend
-npm test
-```
-
-### Database Migrations
-
-```bash
-# Create new migration
-alembic revision --autogenerate -m "description"
-
-# Apply migrations
-alembic upgrade head
-
-# Rollback migration
-alembic downgrade -1
-```
-
-## API Documentation
-
-Once the backend is running, visit:
-- API docs (Swagger): http://localhost:8000/docs
-- Alternative docs (ReDoc): http://localhost:8000/redoc
-
-## Deployment
-
-See [Deployment Guide](./DEPLOYMENT.md) for production deployment instructions.
-
-## Architecture
-
-- **Frontend**: Next.js 14 with App Router, TypeScript, Tailwind CSS
-- **Backend**: FastAPI with SQLAlchemy ORM
-- **Database**: Azure PostgreSQL
-- **Storage**: Azure Blob Storage
-- **Authentication**: JWT + Google OAuth
-- **Image Processing**: Pillow, OpenCV
-
-## Security
-
-- HTTPS/TLS encryption
-- JWT-based authentication
-- Password hashing with bcrypt
-- CORS configuration
-- Security headers (CSP, X-Frame-Options, etc.)
-- Automatic GPS stripping from EXIF for public shares
-
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Write tests
-4. Submit a pull request
-
-## License
-
-This project is for educational purposes as part of DPCS coursework.
-
-## Support
-
-For issues and questions, please refer to the project documentation or contact the development team.
+**Happy Deploying! 🚀**
