@@ -30,15 +30,13 @@ jobs:
           npm run build --if-present
           npm run test --if-present
 
-      - name: Upload artifact for deployment job
+      - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: node-app
           path: |
-            frontend/.next/
-            frontend/package*.json
-            frontend/public/
-            frontend/next.config.*
+            frontend/
+            !frontend/node_modules/
 
   deploy:
     runs-on: ubuntu-latest
@@ -69,3 +67,4 @@ jobs:
           package: .
 
           
+
