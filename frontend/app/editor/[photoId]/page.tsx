@@ -333,7 +333,7 @@ export default function EditorPage() {
                 throw new Error('No preview URL returned')
             }
 
-            const res = await fetch(preview)
+            const res = await fetch(preview, { cache: 'no-store' })
             const blob = await res.blob()
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')

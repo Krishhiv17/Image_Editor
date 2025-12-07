@@ -180,10 +180,18 @@ async def commit_edit(
         height = None
     
     # Update existing photo record
-    photo.blob_url = blob_service.get_blob_url(
+    base_blob_url = blob_service.get_blob_url(
         settings.blob_container_originals,
         photo.blob_name
     )
+    # Generate a fresh SAS for cache busting on the client
+    sas_token = blob_service.generate_read_sas_token(
+        settings.blob_container_originals,
+        photo.blob_name,
+        expiry_minutes=120
+    )
+
+    photo.blob_url = base_blob_url
     photo.file_size = len(processed_bytes)
     photo.content_type = f"image/{graph.output_format}"
     photo.width = width
@@ -194,4 +202,9 @@ async def commit_edit(
     db.commit()
     db.refresh(photo)
     
-    return {"id": str(photo.id), "message": "Photo saved successfully", "blob_url": photo.blob_url}
+    return {
+        "id": str(photo.id),
+        "message": "Photo saved successfully",
+        "blob_url": photo.blob_url,
+        "signed_url": f"{base_blob_url}{sas_token}"
+    }
