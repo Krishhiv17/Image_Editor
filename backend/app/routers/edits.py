@@ -7,10 +7,12 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User, Photo
 from app.schemas.edit import OperationGraph, EditPreviewResponse
+from app.utils.exif import extract_exif_data
 from app.services.image_service import image_service
 from app.services.blob_service import blob_service
 from app.config import settings
 from uuid import UUID
+from datetime import datetime
 import time
 import uuid
 
@@ -153,16 +155,11 @@ async def commit_edit(
             detail=f"Image processing failed: {e}"
         )
     
-    # Generate new filename
-    # e.g. "edited_{uuid}.jpg"
-    new_filename = f"edited_{uuid.uuid4()}.{graph.output_format}"
-    blob_name = f"{current_user.id}/{new_filename}"
-    
-    # Upload to blob storage
+    # Overwrite the existing blob for this photo
     try:
         blob_service.upload_bytes(
             settings.blob_container_originals,
-            blob_name,
+            photo.blob_name,
             processed_bytes,
             content_type=f"image/{graph.output_format}"
         )
@@ -171,24 +168,30 @@ async def commit_edit(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload edited image: {e}"
         )
-        
-    # Get public URL (or construct it)
-    blob_url = blob_service.get_blob_url(settings.blob_container_originals, blob_name)
-
-    # Create new Photo record
-    new_photo = Photo(
-        id=str(uuid.uuid4()),
-        owner_id=current_user.id,
-        filename=f"Edited {photo.filename}",
-        blob_name=blob_name,
-        blob_url=blob_url,
-        file_size=len(processed_bytes),
-        content_type=f"image/{graph.output_format}",
-        # Copy other metadata if needed
+    
+    # Extract dimensions/EXIF from the edited image
+    try:
+        exif_data = extract_exif_data(processed_bytes)
+        width = exif_data.get("width")
+        height = exif_data.get("height")
+    except Exception:
+        exif_data = {}
+        width = None
+        height = None
+    
+    # Update existing photo record
+    photo.blob_url = blob_service.get_blob_url(
+        settings.blob_container_originals,
+        photo.blob_name
     )
+    photo.file_size = len(processed_bytes)
+    photo.content_type = f"image/{graph.output_format}"
+    photo.width = width
+    photo.height = height
+    photo.exif_data = exif_data
+    photo.updated_at = datetime.utcnow()
     
-    db.add(new_photo)
     db.commit()
-    db.refresh(new_photo)
+    db.refresh(photo)
     
-    return {"id": new_photo.id, "message": "Photo saved successfully"}
+    return {"id": str(photo.id), "message": "Photo saved successfully", "blob_url": photo.blob_url}

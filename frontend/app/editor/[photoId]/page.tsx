@@ -29,6 +29,7 @@ export default function EditorPage() {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [isDownloading, setIsDownloading] = useState(false)
     const [activeTab, setActiveTab] = useState<'view' | 'crop' | 'resize' | 'filter' | 'rotate'>('view')
     const [isComparing, setIsComparing] = useState(false)
 
@@ -227,6 +228,35 @@ export default function EditorPage() {
         setPendingOperation(null)
     }
 
+    const buildFinalOperations = () => {
+        const finalOps = [...appliedOperations]
+        if (pendingOperation) {
+            finalOps.push(pendingOperation)
+        }
+
+        Object.entries(adjustments).forEach(([type, value]) => {
+            // Rotation is handled via rotate ops
+            if (type === 'rotation') return
+
+            let isNeutral = false
+            if (['temperature', 'tint', 'blur', 'sepia', 'grayscale', 'vignette'].includes(type)) {
+                if (Math.abs(value) < 0.01) isNeutral = true
+            } else {
+                if (Math.abs(value - 1.0) < 0.01) isNeutral = true
+            }
+
+            if (!isNeutral) {
+                if (['blur', 'sepia', 'grayscale', 'vignette'].includes(type)) {
+                    finalOps.push({ op: 'filter', type: type, intensity: value })
+                } else {
+                    finalOps.push({ op: 'adjust', type: type, amount: value })
+                }
+            }
+        })
+
+        return finalOps
+    }
+
     const handleUndo = () => {
         if (appliedOperations.length > 0) {
             const newOps = [...appliedOperations]
@@ -255,32 +285,7 @@ export default function EditorPage() {
 
     const handleSave = async () => {
         if (!photo) return
-
-        // Reconstruct final ops same as preview
-        const finalOps = [...appliedOperations]
-        if (pendingOperation) {
-            finalOps.push(pendingOperation)
-        }
-
-        Object.entries(adjustments).forEach(([type, value]) => {
-            // Rotation is represented via rotate ops, skip here
-            if (type === 'rotation') return
-
-            let isNeutral = false
-            if (['temperature', 'tint', 'blur', 'sepia', 'grayscale', 'vignette'].includes(type)) {
-                if (Math.abs(value) < 0.01) isNeutral = true
-            } else {
-                if (Math.abs(value - 1.0) < 0.01) isNeutral = true
-            }
-
-            if (!isNeutral) {
-                if (['blur', 'sepia', 'grayscale', 'vignette'].includes(type)) {
-                    finalOps.push({ op: 'filter', type: type, intensity: value })
-                } else {
-                    finalOps.push({ op: 'adjust', type: type, amount: value })
-                }
-            }
-        })
+        const finalOps = buildFinalOperations()
 
         if (finalOps.length === 0) {
             alert('No changes to save!')
@@ -302,6 +307,48 @@ export default function EditorPage() {
             alert('Failed to save photo')
         } finally {
             setIsSaving(false)
+        }
+    }
+
+    const handleDownload = async () => {
+        if (!photo) return
+        const finalOps = buildFinalOperations()
+
+        if (finalOps.length === 0) {
+            alert('No changes to download!')
+            return
+        }
+
+        setIsDownloading(true)
+        try {
+            const response = await apiClient.post('/api/edits/preview', {
+                photo_id: params.photoId,
+                operations: finalOps,
+                output_format: 'jpeg',
+                quality: 90
+            })
+
+            const preview = response.data?.preview_url
+            if (!preview) {
+                throw new Error('No preview URL returned')
+            }
+
+            const res = await fetch(preview)
+            const blob = await res.blob()
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            const safeName = photo.filename?.replace(/\.[^/.]+$/, '') || 'edited-photo'
+            link.href = url
+            link.download = `${safeName}-edited.jpeg`
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            window.URL.revokeObjectURL(url)
+        } catch (error) {
+            console.error('Download failed:', error)
+            alert('Failed to download edited image')
+        } finally {
+            setIsDownloading(false)
         }
     }
 
@@ -367,7 +414,9 @@ export default function EditorPage() {
                         canUndo={appliedOperations.length > 0 || hasAdjustmentChanges()}
                         canApply={!!pendingOperation}
                         isSaving={isSaving}
+                        isDownloading={isDownloading}
                         onSave={handleSave}
+                        onDownload={handleDownload}
                     />
                 </div>
             </div>

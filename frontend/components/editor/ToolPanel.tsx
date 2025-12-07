@@ -18,7 +18,9 @@ interface ToolPanelProps {
     canUndo: boolean
     canApply: boolean
     isSaving?: boolean
+    isDownloading?: boolean
     onSave: () => void
+    onDownload: () => void
 }
 
 export default function ToolPanel({
@@ -39,7 +41,9 @@ export default function ToolPanel({
     canUndo,
     canApply,
     isSaving,
-    onSave
+    isDownloading,
+    onSave,
+    onDownload
 }: ToolPanelProps) {
     const [selectedFilter, setSelectedFilter] = React.useState<string | null>(null)
     const [intensity, setIntensity] = React.useState<number>(1.0)
@@ -255,12 +259,19 @@ export default function ToolPanel({
                         <button
                             onClick={onSave}
                             disabled={isSaving}
-                            className={`flex - 1 px - 4 py - 2 bg - green - 600 text - white rounded - lg hover: bg - green - 700 font - medium transition - colors ${isSaving ? 'opacity-50 cursor-not-allowed' : ''
-                                } `}
+                            className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                         >
-                            {isSaving ? 'Saving...' : 'Save Copy'}
+                            {isSaving ? 'Saving...' : 'Save'}
                         </button>
                     </div>
+                    <button
+                        onClick={onDownload}
+                        disabled={isDownloading}
+                        className={`w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors ${isDownloading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        {isDownloading ? 'Downloading...' : 'Download'}
+                    </button>
                 </div>
             </div>
         </div>
