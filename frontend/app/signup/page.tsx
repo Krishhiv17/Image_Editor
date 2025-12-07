@@ -13,6 +13,10 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+  const googleLoginUrl = apiBaseUrl
+    ? `${apiBaseUrl}/api/auth/oauth/google/login`
+    : '/api/auth/oauth/google/login'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,7 +147,7 @@ export default function SignupPage() {
             {/* Google Sign In */}
             <button
               type="button"
-              onClick={() => window.location.href = 'http://localhost:8000/api/auth/oauth/google/login'}
+              onClick={() => window.location.href = googleLoginUrl}
               className="w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-600 transition-all"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
