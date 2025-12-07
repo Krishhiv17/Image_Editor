@@ -81,10 +81,11 @@ export default function EditorCanvas({
     // Cleanup filter engine on unmount
     useEffect(() => {
         return () => {
-            if (filterEngineRef.current) {
-                filterEngineRef.current.dispose()
-                filterEngineRef.current = null
+            const engine = filterEngineRef.current
+            if (engine && typeof engine.dispose === 'function') {
+                engine.dispose()
             }
+            filterEngineRef.current = null
         }
     }, [])
 

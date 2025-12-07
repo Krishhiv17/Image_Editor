@@ -327,7 +327,16 @@ export class WebGLFilterEngine {
     /**
      * Clean up resources
      */
-    cleanup(): void {
+    dispose(): void {
+        try {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        } catch (_) {
+            // ignore
+        }
+        this.canvas.width = 0
+        this.canvas.height = 0
+        this.sourceImage.onload = null
+        this.sourceImage.onerror = null
         this.sourceImage.src = ''
     }
 }
