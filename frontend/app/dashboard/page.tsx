@@ -24,8 +24,8 @@ function DashboardContent() {
 
       setTokensProcessed(true)
 
-      // Remove tokens from URL (clean URL)
-      router.replace('/dashboard')
+      // Force reload so AuthProvider re-runs with tokens present
+      window.location.href = '/dashboard'
     }
   }, [searchParams, router, tokensProcessed])
 
