@@ -1,6 +1,9 @@
 # Stage 1: Build the application
 FROM node:20-alpine AS builder
 
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 WORKDIR /app
 
 # Copy package files
@@ -17,6 +20,9 @@ RUN npm run build
 
 # Stage 2: Production image
 FROM node:20-alpine AS runner
+
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 WORKDIR /app
 
