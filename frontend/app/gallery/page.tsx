@@ -23,7 +23,7 @@ interface Photo {
 
 export default function GalleryPage() {
     const router = useRouter()
-    const { user, loading: authLoading, isAuthenticated } = useAuth()
+    const { user, loading: authLoading, isAuthenticated, logout } = useAuth()
     const [photos, setPhotos] = useState<Photo[]>([])
     const [loading, setLoading] = useState(true)
     const [showUpload, setShowUpload] = useState(false)
@@ -124,16 +124,10 @@ export default function GalleryPage() {
                                 Photo Editor
                             </h1>
                             <button
-                                onClick={() => router.push('/dashboard')}
-                                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-                            >
-                                Dashboard
-                            </button>
-                            <button
                                 onClick={() => router.push('/gallery')}
                                 className="text-blue-600 dark:text-blue-400 font-semibold"
                             >
-                                Gallery
+                                Home
                             </button>
                             <button
                                 onClick={() => router.push('/albums')}
@@ -179,6 +173,12 @@ export default function GalleryPage() {
                             <span className="text-sm text-gray-600 dark:text-gray-300">
                                 {user?.email}
                             </span>
+                            <button
+                                onClick={logout}
+                                className="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                Sign Out
+                            </button>
                         </div>
                     </div>
                 </div>
