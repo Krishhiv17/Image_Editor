@@ -263,6 +263,9 @@ export default function EditorPage() {
         }
 
         Object.entries(adjustments).forEach(([type, value]) => {
+            // Rotation is represented via rotate ops, skip here
+            if (type === 'rotation') return
+
             let isNeutral = false
             if (['temperature', 'tint', 'blur', 'sepia', 'grayscale', 'vignette'].includes(type)) {
                 if (Math.abs(value) < 0.01) isNeutral = true
