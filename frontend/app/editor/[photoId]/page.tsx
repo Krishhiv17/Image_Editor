@@ -321,20 +321,18 @@ export default function EditorPage() {
 
         setIsDownloading(true)
         try {
-            const response = await apiClient.post('/api/edits/preview', {
-                photo_id: params.photoId,
-                operations: finalOps,
-                output_format: 'jpeg',
-                quality: 90
-            })
+            const res = await apiClient.post(
+                '/api/edits/download',
+                {
+                    photo_id: params.photoId,
+                    operations: finalOps,
+                    output_format: 'jpeg',
+                    quality: 90,
+                },
+                { responseType: 'blob' }
+            )
 
-            const preview = response.data?.preview_url
-            if (!preview) {
-                throw new Error('No preview URL returned')
-            }
-
-            const res = await fetch(preview, { cache: 'no-store' })
-            const blob = await res.blob()
+            const blob = res.data as Blob
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
             const safeName = photo.filename?.replace(/\.[^/.]+$/, '') || 'edited-photo'

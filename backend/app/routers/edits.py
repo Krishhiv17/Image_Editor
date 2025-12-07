@@ -15,6 +15,8 @@ from uuid import UUID
 from datetime import datetime
 import time
 import uuid
+import io
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
@@ -208,3 +210,62 @@ async def commit_edit(
         "blob_url": photo.blob_url,
         "signed_url": f"{base_blob_url}{sas_token}"
     }
+
+
+@router.post("/download")
+async def download_edit(
+    graph: OperationGraph,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Apply operations and return the edited image as a download (does not persist).
+    """
+    # Get original photo
+    photo = db.query(Photo).filter(
+        Photo.id == graph.photo_id,
+        Photo.owner_id == current_user.id
+    ).first()
+
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found"
+        )
+
+    # Download original image bytes
+    try:
+        image_bytes = blob_service.get_blob_bytes(
+            settings.blob_container_originals,
+            photo.blob_name
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve original image: {e}"
+        )
+
+    # Process image
+    try:
+        processed_bytes = image_service.process_image(
+            image_bytes,
+            graph.operations,
+            format=graph.output_format,
+            quality=graph.quality
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Image processing failed: {e}"
+        )
+
+    filename_safe = (photo.filename or "photo").rsplit(".", 1)[0]
+    download_name = f"{filename_safe}-edited.{graph.output_format}"
+
+    return StreamingResponse(
+        io.BytesIO(processed_bytes),
+        media_type=f"image/{graph.output_format}",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"'
+        }
+    )
