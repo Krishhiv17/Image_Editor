@@ -243,15 +243,16 @@ async def google_callback(
         
         # Redirect to frontend with tokens in URL
         from starlette.responses import RedirectResponse
-        frontend_url = "http://localhost:3000/dashboard"
-        redirect_url = f"{frontend_url}?access_token={tokens['access_token']}&refresh_token={tokens['refresh_token']}"
+        frontend_base = settings.frontend_url.rstrip("/")
+        redirect_url = f"{frontend_base}/dashboard?access_token={tokens['access_token']}&refresh_token={tokens['refresh_token']}"
         
         return RedirectResponse(url=redirect_url)
         
     except Exception as e:
         # Redirect to frontend login page with error
         from starlette.responses import RedirectResponse
-        error_url = f"http://localhost:3000/login?error=oauth_failed&message={str(e)}"
+        frontend_base = settings.frontend_url.rstrip("/")
+        error_url = f"{frontend_base}/login?error=oauth_failed&message={str(e)}"
         return RedirectResponse(url=error_url)
 
 
