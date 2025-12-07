@@ -9,8 +9,6 @@ interface ToolPanelProps {
     onFilter: (filterId: string) => void
     adjustments?: { [key: string]: number }
     onAdjustmentChange?: (type: string, value: number) => void
-    onCompareStart?: () => void
-    onCompareEnd?: () => void
     onApply: () => void
     onReset: () => void
     onUndo: () => void
@@ -32,8 +30,6 @@ export default function ToolPanel({
     onFilter,
     adjustments,
     onAdjustmentChange,
-    onCompareStart,
-    onCompareEnd,
     onApply,
     onReset,
     onUndo,
@@ -245,26 +241,14 @@ export default function ToolPanel({
                         </button>
                     )}
 
-                    <div className="flex gap-2">
-                        <button
-                            onMouseDown={onCompareStart}
-                            onMouseUp={onCompareEnd}
-                            onMouseLeave={onCompareEnd}
-                            onTouchStart={onCompareStart}
-                            onTouchEnd={onCompareEnd}
-                            className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium transition-colors active:scale-95"
-                        >
-                            Hold for Original
-                        </button>
-                        <button
-                            onClick={onSave}
-                            disabled={isSaving}
-                            className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                        >
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </button>
-                    </div>
+                    <button
+                        onClick={onSave}
+                        disabled={isSaving}
+                        className={`w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                    >
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
                     <button
                         onClick={onDownload}
                         disabled={isDownloading}

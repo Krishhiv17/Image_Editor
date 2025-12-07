@@ -140,7 +140,34 @@ class ImageService:
             if op.intensity < 1.0:
                 return Image.blend(img, sepia, op.intensity)
             return sepia
-            return img.filter(ImageFilter.GaussianBlur(radius=op.intensity * 5))
+        elif op.type == FilterType.GRAYSCALE:
+            # Convert to grayscale; keep RGB mode
+            gray = ImageOps.grayscale(img)
+            if op.intensity < 1.0:
+                # Blend with original based on intensity
+                gray_rgb = gray.convert("RGB")
+                return Image.blend(img, gray_rgb, op.intensity)
+            return gray.convert("RGB")
+        elif op.type == FilterType.VIGNETTE:
+            # Create a radial gradient mask to darken edges
+            width, height = img.size
+            center_x = width / 2
+            center_y = height / 2
+            max_dist = (center_x ** 2 + center_y ** 2) ** 0.5
+            mask = Image.new("L", (width, height), 255)
+            mask_pixels = mask.load()
+            intensity = max(0.0, min(op.intensity, 1.0))
+            for y in range(height):
+                for x in range(width):
+                    dx = x - center_x
+                    dy = y - center_y
+                    dist = (dx * dx + dy * dy) ** 0.5
+                    vignette_factor = 1 - (dist / max_dist) * intensity
+                    vignette_factor = max(0, min(1, vignette_factor))
+                    mask_pixels[x, y] = int(255 * vignette_factor)
+            # Darken edges by blending with black using the mask
+            black_bg = Image.new("RGB", (width, height), (0, 0, 0))
+            return Image.composite(img, black_bg, mask)
         return img
 
     def _apply_text(self, img: Image.Image, op: TextOp) -> Image.Image:

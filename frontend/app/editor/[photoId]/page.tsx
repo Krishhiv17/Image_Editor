@@ -31,7 +31,6 @@ export default function EditorPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [isDownloading, setIsDownloading] = useState(false)
     const [activeTab, setActiveTab] = useState<'view' | 'crop' | 'resize' | 'filter' | 'rotate'>('view')
-    const [isComparing, setIsComparing] = useState(false)
 
     // Rotation state for instant preview
     const [rotation, setRotation] = useState(0)
@@ -383,7 +382,7 @@ export default function EditorPage() {
             <div className="flex-1 flex overflow-hidden">
                 <div className="flex-1 relative bg-gray-50 dark:bg-gray-900">
                     <EditorCanvas
-                        imageUrl={isComparing ? photo.blob_url : (previewUrl || photo.blob_url)}
+                        imageUrl={previewUrl || photo.blob_url}
                         mode={activeTab}
                         onCropChange={handleCropChange}
                         onResizeChange={handleResizeChange}
@@ -403,8 +402,6 @@ export default function EditorPage() {
                         onFilter={() => { }} // Legacy
                         adjustments={adjustments}
                         onAdjustmentChange={handleAdjustmentChange}
-                        onCompareStart={() => setIsComparing(true)}
-                        onCompareEnd={() => setIsComparing(false)}
                         onApply={handleApply}
                         onReset={handleRevert}
                         onUndo={handleUndo}
